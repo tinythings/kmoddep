@@ -30,9 +30,9 @@ impl KernelInfo {
         KernelInfo {
             version: kver.to_owned(),
             path: PathBuf::from(if ["", "/"].contains(&rootpath) {
-                format!("{}/{}", rootpath, MOD_D)
-            } else {
                 MOD_D.to_string()
+            } else {
+                format!("{}/{}", rootpath, MOD_D)
             }),
             dep_path: PathBuf::from(""),
             deplist: HashMap::default(),
