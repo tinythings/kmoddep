@@ -6,6 +6,10 @@ A tiny library to work with Linux kernel module information. It currently featur
 - find module dependencies
 - lsmod (as a function)
 
+# Documentation
+
+[https://docs.rs/kmoddep/latest/kmoddep/](https://docs.rs/kmoddep/latest/kmoddep/)
+
 # Usage Example
 
 ```[rust]
