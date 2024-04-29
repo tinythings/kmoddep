@@ -6,7 +6,6 @@ license = "Apache-2.0"
 description = "Linux module information"
 homepage = "https://github.com/isbm/kmoddep"
 repository = "https://github.com/isbm/kmoddep"
-documentation = "https://github.com/isbm/kmoddep/blob/master/README.md"
 readme = "README.md"
 
 [dependencies]
