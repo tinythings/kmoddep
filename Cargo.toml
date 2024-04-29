@@ -2,7 +2,11 @@
 name = "kmoddep"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Apache-2.0"
+description = "Linux module information"
+homepage = "https://github.com/isbm/kmoddep"
+repository = "https://github.com/isbm/kmoddep"
+documentation = "https://github.com/isbm/kmoddep/blob/master/README.md"
+readme = "README.md"
 
 [dependencies]
