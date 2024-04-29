@@ -1,9 +1,9 @@
-use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use std::{
     collections::{HashMap, HashSet},
     process::Command,
 };
+use std::{fs::read_to_string, io::Error};
 
 pub static MOD_D: &str = "/lib/modules";
 pub static MOD_DEP_F: &str = "modules.dep";
@@ -26,8 +26,8 @@ impl KernelInfo {
     ///
     /// Root path is either "/" for the host filesystem or a mountpoint
     /// to the root filesystem.
-    pub fn new(rootpath: &str, kver: &str) -> Self {
-        KernelInfo {
+    pub fn new(rootpath: &str, kver: &str) -> Result<Self, Error> {
+        Ok(KernelInfo {
             version: kver.to_owned(),
             path: PathBuf::from(if ["", "/"].contains(&rootpath) {
                 MOD_D.to_string()
@@ -39,21 +39,21 @@ impl KernelInfo {
             _loaded: false,
             is_valid: false,
         }
-        .init()
+        .init()?)
     }
 
     /// Initialise the KernelInfo. This can be ran only once per an instance.
-    fn init(mut self) -> Self {
+    fn init(mut self) -> Result<Self, Error> {
         if self._loaded {
-            return self;
+            return Ok(self);
         }
 
         self.path = self.path.join(&self.version);
         self.dep_path = self.dep_path.join(self.path.as_os_str()).join(MOD_DEP_F);
-        self.load_deps();
+        self.load_deps()?;
         self._loaded = true;
 
-        self
+        Ok(self)
     }
 
     /// Return current kernel info root path.
@@ -63,15 +63,15 @@ impl KernelInfo {
 
     /// Load module dependencies
     /// Skip if there is no /lib/modules/<version>/kernel directory
-    fn load_deps(&mut self) {
+    fn load_deps(&mut self) -> Result<(), Error> {
         if self._loaded {
-            return;
+            return Ok(());
         }
 
         let modpath = self.get_kernel_path().join("kernel");
         self.is_valid = Path::new(modpath.to_str().unwrap()).is_dir();
         if self.is_valid {
-            for line in read_to_string(self.dep_path.as_os_str()).unwrap().lines() {
+            for line in read_to_string(self.dep_path.as_os_str())?.lines() {
                 if let Some(sl) = line.split_once(':') {
                     let (modpath, moddeps) = (sl.0.trim(), sl.1.trim());
                     let mut deplist: Vec<String> = vec![];
@@ -84,6 +84,8 @@ impl KernelInfo {
                 }
             }
         }
+
+        Ok(())
     }
 
     /// Returns true if there are actual modules on the media for this kernel.
