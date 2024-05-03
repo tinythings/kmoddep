@@ -58,7 +58,7 @@ impl KernelInfo {
 
     /// Return current kernel info root path.
     pub fn get_kernel_path(&self) -> PathBuf {
-        PathBuf::from(MOD_D).join(&self.version)
+        PathBuf::from(&self.path)
     }
 
     /// Load module dependencies
