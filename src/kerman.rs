@@ -1,7 +1,10 @@
-use std::path::{Path, PathBuf};
 use std::{
     collections::{HashMap, HashSet},
     process::Command,
+};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
 };
 use std::{fs::read_to_string, io::Error};
 
@@ -17,7 +20,7 @@ pub struct KernelInfo {
     dep_path: PathBuf,
     deplist: HashMap<String, Vec<String>>,
     is_valid: bool,
-    _loaded: bool,
+    _ext: String,
 }
 
 impl KernelInfo {
@@ -36,7 +39,7 @@ impl KernelInfo {
             }),
             dep_path: PathBuf::from(""),
             deplist: HashMap::default(),
-            _loaded: false,
+            _ext: "".to_string(),
             is_valid: false,
         }
         .init()?)
@@ -44,14 +47,13 @@ impl KernelInfo {
 
     /// Initialise the KernelInfo. This can be ran only once per an instance.
     fn init(mut self) -> Result<Self, Error> {
-        if self._loaded {
+        if !self._ext.is_empty() {
             return Ok(self);
         }
 
         self.path = self.path.join(&self.version);
         self.dep_path = self.dep_path.join(self.path.as_os_str()).join(MOD_DEP_F);
         self.load_deps()?;
-        self._loaded = true;
 
         Ok(self)
     }
@@ -61,10 +63,25 @@ impl KernelInfo {
         PathBuf::from(&self.path)
     }
 
+    /// Get modules extension system: .ko[.compression]
+    /// NOTE: assumption is that _all modules_ are with the same extension!
+    fn get_fext(&self, fname: Option<&OsStr>) -> String {
+        format!(
+            ".ko{}",
+            fname
+                .unwrap()
+                .to_owned()
+                .to_str()
+                .unwrap()
+                .rsplit_once(".ko")
+                .map_or("", |(_, l)| l)
+        )
+    }
+
     /// Load module dependencies
     /// Skip if there is no /lib/modules/<version>/kernel directory
     fn load_deps(&mut self) -> Result<(), Error> {
-        if self._loaded {
+        if !self._ext.is_empty() {
             return Ok(());
         }
 
@@ -74,6 +91,10 @@ impl KernelInfo {
             for line in read_to_string(self.dep_path.as_os_str())?.lines() {
                 if let Some(sl) = line.split_once(':') {
                     let (modpath, moddeps) = (sl.0.trim(), sl.1.trim());
+                    if self._ext.is_empty() {
+                        self._ext = self.get_fext(PathBuf::from(modpath).file_name());
+                    }
+
                     let mut deplist: Vec<String> = vec![];
 
                     if !moddeps.is_empty() {
@@ -107,8 +128,8 @@ impl KernelInfo {
     /// In this case they are tried to be resolved via external "modinfo".
     fn expand_module_name<'a>(&'a self, name: &'a String) -> &String {
         let mut m_name: String;
-        if !name.ends_with(".ko") {
-            m_name = format!("{}.ko", name); // "sunrpc" -> "sunrpc.ko"
+        if !name.ends_with(self._ext.as_str()) {
+            m_name = format!("{}{}", name, self._ext); // "sunrpc" -> "sunrpc.ko"
         } else {
             m_name = name.to_owned();
         }
