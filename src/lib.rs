@@ -1,8 +1,9 @@
+pub mod kerman;
+pub mod moddeps;
+pub mod modinfo;
+
 use kerman::{KernelInfo, MOD_D};
 use std::{fs::read_dir, io::Error};
-mod kerman;
-mod moddeps;
-pub mod modinfo;
 
 /// Get the list of existing kernels in the system.
 pub fn get_kernel_infos(rootfs: Option<&str>) -> Result<Vec<KernelInfo>, Error> {
