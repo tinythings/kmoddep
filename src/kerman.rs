@@ -1,12 +1,11 @@
 use std::{
     collections::{HashMap, HashSet},
+    ffi::OsStr,
+    fs::read_to_string,
+    io::Error,
+    path::{Path, PathBuf},
     process::Command,
 };
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
-use std::{fs::read_to_string, io::Error};
 
 pub static MOD_D: &str = "/lib/modules";
 pub static MOD_DEP_F: &str = "modules.dep";
@@ -18,9 +17,16 @@ pub struct KernelInfo {
     pub version: String,
     path: PathBuf,
     dep_path: PathBuf,
-    deplist: HashMap<String, Vec<String>>,
     is_valid: bool,
     _ext: String,
+
+    // Dependencies list in a format:
+    //     "modulename" -> ["kernel/path/to/a/module.ko.zst", "kernel/other.ko.zst"]
+    deplist: HashMap<String, Vec<String>>,
+
+    // Dependencies list in a format:
+    //     "modulename" -> ["module", "other"]
+    lookup_deplist: HashSet<String>,
 }
 
 impl KernelInfo {
@@ -29,6 +35,11 @@ impl KernelInfo {
     ///
     /// Root path is either "/" for the host filesystem or a mountpoint
     /// to the root filesystem.
+    ///
+    /// NOTE: The module resolver is very simple here and won't scale that much
+    ///       if a kernel will have millions of modules. But as of 2024 it
+    ///       works OK with those dozen of thousands as for a generator.
+    ///       Generated CPIO anyway will contain already sorted list.
     pub fn new(rootpath: &str, kver: &str) -> Result<Self, Error> {
         Ok(KernelInfo {
             version: kver.to_owned(),
@@ -39,6 +50,7 @@ impl KernelInfo {
             }),
             dep_path: PathBuf::from(""),
             deplist: HashMap::default(),
+            lookup_deplist: HashSet::default(),
             _ext: "".to_string(),
             is_valid: false,
         }
@@ -96,12 +108,26 @@ impl KernelInfo {
                     }
 
                     let mut deplist: Vec<String> = vec![];
+                    let mut deplist_idx: Vec<String> = vec![];
 
                     if !moddeps.is_empty() {
                         deplist = moddeps.split(' ').map(|x| x.to_owned()).collect();
+                        deplist_idx = deplist
+                            .iter()
+                            .map(|x| {
+                                x.split('/')
+                                    .last()
+                                    .unwrap()
+                                    .split_once('.')
+                                    .unwrap()
+                                    .0
+                                    .to_string()
+                            })
+                            .collect();
                     }
 
                     self.deplist.insert(modpath.to_owned(), deplist);
+                    self.lookup_deplist.extend(deplist_idx.into_iter());
                 }
             }
         }
@@ -215,6 +241,11 @@ impl KernelInfo {
         }
 
         mod_tree
+    }
+
+    /// Return true if a given module is a dependency to something else
+    pub fn is_dep(&self, name: &str) -> bool {
+        self.lookup_deplist.contains(name)
     }
 
     /// Same as `get_deps_for`, except returns flattened list
