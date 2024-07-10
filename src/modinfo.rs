@@ -3,7 +3,7 @@ use std::io::BufReader;
 use std::{fs::File, process};
 
 /// ModInfo contains current live module information
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModInfo {
     pub name: String,
     pub mem_size: usize,
