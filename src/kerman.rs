@@ -178,7 +178,7 @@ impl KernelInfo {
 
         let out = Command::new(MOD_INFO_EXE).arg(name).output();
         match out {
-            Ok(_) => match String::from_utf8(out.unwrap().stdout) {
+            Ok(output) => match String::from_utf8(output.stdout) {
                 Ok(data) => {
                     for line in data.lines().map(|el| el.replace(' ', "")) {
                         if line.starts_with("filename:/") && line.contains("/kernel/") {
@@ -194,9 +194,15 @@ impl KernelInfo {
                         }
                     }
                 }
-                Err(_) => todo!(),
+                Err(e) => {
+                    // Failed to parse UTF-8 from modinfo output
+                    eprintln!("Warning: Failed to parse modinfo output for '{}': {}", name, e);
+                }
             },
-            Err(_) => todo!(),
+            Err(e) => {
+                // Failed to execute modinfo command
+                eprintln!("Warning: Failed to execute modinfo for '{}': {}", name, e);
+            }
         }
 
         name
