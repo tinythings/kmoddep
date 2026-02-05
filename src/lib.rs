@@ -17,9 +17,9 @@ pub fn get_kernel_infos(rootfs: Option<&str>) -> Result<Vec<KernelInfo>, Error> 
 
     let mut kernels: Vec<KernelInfo> = vec![];
 
-    for fres in read_dir(format!("{}{}", rfs_path.trim_end_matches("/"), MOD_D)).unwrap() {
-        let fd = fres.unwrap();
-        if fd.file_type().unwrap().is_dir() {
+    for fres in read_dir(format!("{}{}", rfs_path.trim_end_matches("/"), MOD_D))? {
+        let fd = fres?;
+        if fd.file_type()?.is_dir() {
             let kinfo: KernelInfo =
                 KernelInfo::new(rfs_path, fd.path().file_name().unwrap().to_str().unwrap())?;
             if kinfo.is_valid() {
